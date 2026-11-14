@@ -31,6 +31,10 @@ class Html extends \Psecio\Iniscan\Command\Output
 			    $pass = 'warn';
 			}
 
+			if ($result->getStatus() === \Psecio\Iniscan\Rule::STATUS_UNKNOWN) {
+			    $pass = 'unknown';
+			}
+
 			$resultHtml = '<div class="result '.$pass.'">';
 			$resultHtml .= '<table cellpadding="2" cellspacing="0" border="0" class="result">';
 			$resultHtml .= '<tr><td class="key">'.$result->getTestKey();

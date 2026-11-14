@@ -5,6 +5,12 @@ namespace Psecio\Iniscan;
 class Rule
 {
 	/**
+	 * Status for rules that cannot be evaluated because the setting
+	 * is missing from the scanned php.ini file (strict mode)
+	 */
+	const STATUS_UNKNOWN = 'unknown';
+
+	/**
 	 * Severity level of the rule
 	 * @var string
 	 */
@@ -30,9 +36,16 @@ class Rule
 
 	/**
 	 * Pass/fail status of the rule
-	 * @var boolean
+	 * @var boolean|string|null
 	 */
 	private $status = true;
+
+	/**
+	 * Strict "file only" mode flag. When enabled, missing settings
+	 * are not pulled from the runtime configuration (ini_get)
+	 * @var boolean
+	 */
+	private $strict = false;
 
 	/**
 	 * Section in the php.ini the rule's key matches
@@ -81,6 +94,28 @@ class Rule
 	{
 		$this->cast = $cast;
 		return $this;
+	}
+
+	/**
+	 * Set the strict "file only" mode flag
+	 *
+	 * @param boolean $strict Enable/disable strict mode
+	 * @return \Psecio\Iniscan\Rule
+	 */
+	public function setStrict($strict)
+	{
+		$this->strict = (bool)$strict;
+		return $this;
+	}
+
+	/**
+	 * Check if strict "file only" mode is enabled
+	 *
+	 * @return boolean Strict mode enabled/disabled
+	 */
+	public function isStrict()
+	{
+		return $this->strict;
 	}
 
 	/**
@@ -245,6 +280,14 @@ class Rule
 	}
 
 	/**
+	 * Set the status for "unknown" (setting missing from the scanned file)
+	 */
+	public function unknown()
+	{
+		$this->setStatus(self::STATUS_UNKNOWN);
+	}
+
+	/**
 	 * Get the current rule's test definition
 	 *
 	 * @return array Testing config
@@ -331,23 +374,24 @@ class Rule
 
 	/**
 	 * Find the given value in the INI array
-	 *   If not found, returns the currently set value
+	 *   If not found, returns the currently set value (unless in strict mode)
 	 *
 	 * @param string $path "Path" to the value
 	 * @param array $ini Current INI settings
-	 * @return string Found INI value
+	 * @return string|boolean Found INI value, false if not found in strict mode
 	 */
 	public function findValue($path, &$ini)
 	{
-		$value = false;
-
 		if (array_key_exists($path, $ini)) {
-			$value = $ini[$path];
-		} else {
-			// not in the file, pull out the default
-			$value = ini_get($path);
-			$ini[$path] = $value;
+			return $ini[$path];
 		}
+		if ($this->isStrict() === true) {
+			// strict mode: never fall back to the runtime configuration
+			return false;
+		}
+		// not in the file, pull out the default
+		$value = ini_get($path);
+		$ini[$path] = $value;
 		return $value;
 	}
 
@@ -370,6 +414,7 @@ class Rule
 		$this->setValue($value);
 
 		$evalInstance = new $evalClass($this->getSection());
+		$evalInstance->setStrict($this->isStrict());
 
 		if (isset($test->version) && !$this->isVersion($test->version)) {
 			$this->na();

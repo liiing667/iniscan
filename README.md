@@ -60,6 +60,12 @@ PASS   | ERROR    | 4.3.0       | session.use_only_cookies | Must use cookies to
 
 > *NOTE:* When the scan runs, if it cannot find a setting in the `php.ini` given, it will use [ini_get](http://php.net/ini_get) to pull the current setting (possibly the default).
 
+If you want results that depend only on the scanned file, use the `strict` option. In strict mode no runtime values (or additional scanned ini files) are used - settings missing from the given `php.ini` are reported as `UNKNOWN` in the console output and as `"unknown"` in the JSON/XML/HTML results:
+
+```
+vendor/bin/iniscan scan --path=/path/to/php.ini --strict
+```
+
 Command line usage
 ------------------
 
@@ -170,4 +176,3 @@ This is default behavior and does not need to be enabled.
 
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/psecio/iniscan/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-

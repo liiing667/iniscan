@@ -422,6 +422,48 @@ class RuleTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test that the "unknown" status is set correctly
+     *
+     * @covers \Psecio\Iniscan\Rule::unknown
+     */
+    public function testUnknownStatus()
+    {
+        $rule = new Rule(array(), 'testing');
+        $rule->unknown();
+        $this->assertSame(Rule::STATUS_UNKNOWN, $rule->getStatus());
+    }
+
+    /**
+     * Test the getter/setter for the strict mode flag
+     *
+     * @covers \Psecio\Iniscan\Rule::setStrict
+     */
+    public function testGetSetStrict()
+    {
+        $rule = new Rule(array(), 'testing');
+        $this->assertFalse($rule->isStrict());
+        $rule->setStrict(true);
+        $this->assertTrue($rule->isStrict());
+    }
+
+    /**
+     * Test that, in strict mode, "find" does not fall back to the
+     *     runtime configuration and does not modify the INI settings
+     *
+     * @covers \Psecio\Iniscan\Rule::findValue
+     */
+    public function testFindValueStrictMissing()
+    {
+        $rule = new Rule(array(), 'testing');
+        $rule->setStrict(true);
+        $ini = array();
+        $value = $rule->findValue('session.save_path', $ini);
+
+        $this->assertFalse($value);
+        $this->assertArrayNotHasKey('session.save_path', $ini);
+    }
+
+    /**
      * Test the version evaluation
      *
      * @covers \Psecio\Iniscan\Rule::isVersion

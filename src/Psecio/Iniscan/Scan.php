@@ -42,14 +42,23 @@ class Scan
 	private $version;
 
 	/**
+	 * Strict "file only" mode flag. When enabled, only the values found in
+	 * the given php.ini file are used. Settings missing from the file are
+	 * reported as "unknown" instead of falling back to the runtime values.
+	 * @var boolean
+	 */
+	private $strict = false;
+
+	/**
 	 * Init the object with the given ini path
 	 *
 	 * @param string $path PHP.ini path to evaluate [optional]
 	 * @param array $context Set of context environments to run in (ex. "prod" or "dev") [optional]
 	 * @param string $threshold Show only things at or above this theshold
 	 * @param string $version Which version of PHP to scan against
+	 * @param boolean $strict Only use values from the given php.ini file [optional]
 	 */
-	public function __construct($path = null, array $context = array(), $threshold = null, $version = null)
+	public function __construct($path = null, array $context = array(), $threshold = null, $version = null, $strict = false)
 	{
 		if ($path !== null) {
 			$this->setPath($path);
@@ -57,6 +66,7 @@ class Scan
 		$this->setContext($context);
 		$this->setThreshold($threshold);
 		$this->setVersion($version);
+		$this->setStrict($strict);
 	}
 
     /**
@@ -139,6 +149,26 @@ class Scan
 	public function setVersion($version)
 	{
 		$this->version = $version;
+	}
+
+	/**
+	 * Set the strict "file only" mode flag
+	 *
+	 * @param boolean $strict Enable/disable strict mode
+	 */
+	public function setStrict($strict)
+	{
+		$this->strict = (bool)$strict;
+	}
+
+	/**
+	 * Check if strict "file only" mode is enabled
+	 *
+	 * @return boolean Strict mode enabled/disabled
+	 */
+	public function isStrict()
+	{
+		return $this->strict;
 	}
 
 	/**
@@ -260,11 +290,14 @@ class Scan
 		$ini = parse_ini_file( (!is_null($path) ? $path : $this->path));
 
 		// pull in settings from other scanned INI files
-		$scannedIniList = php_ini_scanned_files();
-		if ($scannedIniList !== false) {
-			foreach(explode(',', $scannedIniList) as $scannedFile) {
-				$scannedIni = parse_ini_file(trim($scannedFile));
-				$ini = array_merge($ini, $scannedIni);
+		// (skipped in strict mode: only the given file may be used)
+		if ($this->isStrict() === false) {
+			$scannedIniList = php_ini_scanned_files();
+			if ($scannedIniList !== false) {
+				foreach(explode(',', $scannedIniList) as $scannedFile) {
+					$scannedIni = parse_ini_file(trim($scannedFile));
+					$ini = array_merge($ini, $scannedIni);
+				}
 			}
 		}
 
@@ -317,6 +350,15 @@ class Scan
 				}
 
 				// execute its test
+				$rule->setStrict($this->isStrict());
+
+				// in strict mode, settings missing from the file are "unknown"
+				if ($this->isStrict() && !array_key_exists($key, $ini)) {
+					$rule->unknown();
+					$ruleList[] = $rule;
+					continue;
+				}
+
 				$rule->evaluate($ini);
 				$ruleList[] = $rule;
 			}

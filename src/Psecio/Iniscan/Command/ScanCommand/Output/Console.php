@@ -30,6 +30,7 @@ class Console extends \Psecio\Iniscan\Command\Output
         $fail = 0;
         $pass = 0;
         $warn = 0;
+        $unknown = 0;
 
         foreach ($results as $result) {
             if ($result->getStatus() === false) {
@@ -51,6 +52,11 @@ class Console extends \Psecio\Iniscan\Command\Output
                     default:
                         $bgcolor = 'red';
                 }
+            } elseif ($result->getStatus() === \Psecio\Iniscan\Rule::STATUS_UNKNOWN) {
+                $unknown++;
+                $fgcolor = 'cyan';
+                $status = 'UNKNOWN';
+                $bgcolor = 'black';
             } elseif ($result->getStatus() === null) {
                 $fgcolor = 'magenta';
                 $status = 'N/A';
@@ -68,7 +74,7 @@ class Console extends \Psecio\Iniscan\Command\Output
             $test = $result->getTest();
             $version = (isset($test->version)) ? $test->version : '';
             $test = (isset($test->key)) ? $test->key : '';
-            $value = $result->getValue();
+            $value = (string)$result->getValue();
 
             $output->writeLn(
                 '<fg='.$fgcolor.';bg='.$bgcolor.'>'
@@ -88,6 +94,9 @@ class Console extends \Psecio\Iniscan\Command\Output
         $output->writeLn("\n<info>".$pass." passing</info>\n"
             ."<error>".$fail." failure(s)</error> and <fg=yellow>".$warn." warnings</fg=yellow>"
         );
+        if ($unknown > 0) {
+            $output->writeLn("<fg=cyan>".$unknown." unknown (not set in the scanned file)</fg=cyan>");
+        }
 
         if (!empty($deprecated)) {
             $output->writeLn("\n<error>WARNING: deprecated configuration items found:</error>");

@@ -17,6 +17,13 @@ abstract class Operation
 	private $cast;
 
 	/**
+	 * Strict "file only" mode flag. When enabled, missing settings
+	 * are not pulled from the runtime configuration (ini_get)
+	 * @var boolean
+	 */
+	private $strict = false;
+
+	/**
 	 * Init the Operation and set the section
 	 *
 	 * @param string $section Section name
@@ -47,6 +54,28 @@ abstract class Operation
 	public function getCast()
 	{
 		return $this->cast;
+	}
+
+	/**
+	 * Set the strict "file only" mode flag
+	 *
+	 * @param boolean $strict Enable/disable strict mode
+	 * @return \Psecio\Iniscan\Operation instance
+	 */
+	public function setStrict($strict)
+	{
+		$this->strict = (bool)$strict;
+		return $this;
+	}
+
+	/**
+	 * Check if strict "file only" mode is enabled
+	 *
+	 * @return boolean Strict mode enabled/disabled
+	 */
+	public function isStrict()
+	{
+		return $this->strict;
 	}
 
 	/**
@@ -86,23 +115,24 @@ abstract class Operation
 
 	/**
 	 * Find the given value in the INI array
-	 *   If not found, returns the currently set value
+	 *   If not found, returns the currently set value (unless in strict mode)
 	 *
 	 * @param string $path "Path" to the value
 	 * @param array $ini Current INI settings
-	 * @return string Found INI value
+	 * @return string|boolean Found INI value, false if not found in strict mode
 	 */
 	public function findValue($path, &$ini)
 	{
-		$value = false;
-
 		if (array_key_exists($path, $ini)) {
-			$value = $ini[$path];
-		} else {
-			// not in the file, pull out the default
-			$value = ini_get($path);
-			$ini[$path] = $value;
+			return $ini[$path];
 		}
+		if ($this->isStrict() === true) {
+			// strict mode: never fall back to the runtime configuration
+			return false;
+		}
+		// not in the file, pull out the default
+		$value = ini_get($path);
+		$ini[$path] = $value;
 
 		return $value;
 	}

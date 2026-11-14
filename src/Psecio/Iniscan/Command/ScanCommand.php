@@ -19,7 +19,8 @@ class ScanCommand extends Command
                 new InputOption('context', 'context', InputOption::VALUE_OPTIONAL, 'Environment context (ex. "prod")'),
                 new InputOption('threshold', 'threshold', InputOption::VALUE_OPTIONAL, 'Allows to show only things at or above this theshold'),
                 new InputOption('php', 'php-version', InputOption::VALUE_OPTIONAL, 'Which version of PHP to evaulate'),
-                new InputOption('output', 'output', InputOption::VALUE_OPTIONAL, 'Directory for file output types')
+                new InputOption('output', 'output', InputOption::VALUE_OPTIONAL, 'Directory for file output types'),
+                new InputOption('strict', 'strict', InputOption::VALUE_NONE, 'Only use values from the given php.ini file; missing settings are reported as "unknown"')
             ))
             ->setHelp(
                 'Execute the scan on the php.ini for security best practices'
@@ -66,7 +67,7 @@ class ScanCommand extends Command
             throw new \Exception('Path is null or not accessible: "'.$path.'"');
         }
 
-        $scan = new \Psecio\Iniscan\Scan($path, $context, $threshold, $version);
+        $scan = new \Psecio\Iniscan\Scan($path, $context, $threshold, $version, $input->getOption('strict'));
         $results = $scan->execute();
         $deprecated = $scan->getMarked();
 

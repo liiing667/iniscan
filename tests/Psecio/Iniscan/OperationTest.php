@@ -78,6 +78,22 @@ class OperationTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test that, in strict mode, a missing key returns false without
+     *     falling back to the runtime configuration (ini_get)
+     *
+     * @covers \Psecio\Iniscan\Operation::findValue
+     */
+    public function testKeyNotFoundStrict()
+    {
+        $ini = array();
+        $operation = new OperationStub('PHP');
+        $operation->setStrict(true);
+        $result = $operation->findValue('session.save_path', $ini);
+        $this->assertFalse($result);
+        $this->assertArrayNotHasKey('session.save_path', $ini);
+    }
+
+    /**
      * Test that false is returned when the section isn't found
      *   (and doesn't exist in the default PHP config)
      *

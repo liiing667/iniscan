@@ -23,6 +23,11 @@ class CheckSessionPath extends \Psecio\Iniscan\Rule
 	{
 		// See which type we're working with
 		$handler = $this->findValue('session.save_handler', $ini);
+		if ($handler === false) {
+			// not set in the scanned file (strict mode)
+			$this->unknown();
+			return false;
+		}
 		switch(strtolower($handler)) {
 			case 'file':
 			case 'files':
