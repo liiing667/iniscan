@@ -27,6 +27,8 @@ class CheckSoapWsdlCacheDir extends \Psecio\Iniscan\Rule
 	 */
 	public function evaluate(array $ini)
 	{
+		$this->captureValue('soap.wsdl_cache_dir', $ini);
+
 		$wsdlCacheEnabled = $this->getCast()->castValue($this->findValue('soap.wsdl_cache_enabled', $ini));
 
 		// This only matters if soap.wsdl_cache_enabled is enabled

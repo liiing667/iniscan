@@ -13,7 +13,12 @@ class Xml extends \Psecio\Iniscan\Command\Output
         $resultValues = array();
 
         foreach ($results as $result) {
-        	$resultValues[] = $result->values();
+        	$values = $result->values();
+        	$test = $result->getTest();
+        	$key = (isset($test->key)) ? $test->key : '';
+        	$values['currentValue'] = $this->redactValue($key, $values['currentValue']);
+        	$values['description'] = $this->redactText($values['description']);
+        	$resultValues[] = $values;
         }
 
         $dom = new \DomDocument('1.0', 'UTF-8');

@@ -21,6 +21,8 @@ class CheckSessionPath extends \Psecio\Iniscan\Rule
 	 */
 	public function evaluate(array $ini)
 	{
+		$this->captureValue('session.save_path', $ini);
+
 		// See which type we're working with
 		$handler = $this->findValue('session.save_handler', $ini);
 		switch(strtolower($handler)) {

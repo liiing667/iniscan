@@ -23,6 +23,8 @@ class CheckUploadTmpDir extends \Psecio\Iniscan\Rule
 	 */
 	public function evaluate(array $ini)
 	{
+		$this->captureValue('upload_tmp_dir', $ini);
+
 		$openBasedir = $this->getCast()->castValue($this->findValue('open_basedir', $ini));
 
 		// This only matters if an open_basedir is set

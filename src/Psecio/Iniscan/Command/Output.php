@@ -84,6 +84,37 @@ abstract class Output
     }
 
     /**
+     * Redact a single setting value for display unless plain text
+     *     output of sensitive values was explicitly enabled
+     *
+     * @param string $key INI key the value belongs to
+     * @param mixed $value Value to display
+     * @return mixed Either the mask or the original value
+     */
+    public function redactValue($key, $value)
+    {
+        if ($this->getOption('showSensitive') === true) {
+            return $value;
+        }
+        return \Psecio\Iniscan\Redactor::redact($key, $value);
+    }
+
+    /**
+     * Redact sensitive data (ex. connection strings) inside a free
+     *     text unless plain text output was explicitly enabled
+     *
+     * @param string $text Text to display
+     * @return string Text with sensitive parts masked
+     */
+    public function redactText($text)
+    {
+        if ($this->getOption('showSensitive') === true) {
+            return $text;
+        }
+        return \Psecio\Iniscan\Redactor::redactString($text);
+    }
+
+    /**
      * Render the results of the scan
      *
      * @param array $results Set of scan results

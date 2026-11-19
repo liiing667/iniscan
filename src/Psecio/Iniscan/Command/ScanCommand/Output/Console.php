@@ -68,7 +68,7 @@ class Console extends \Psecio\Iniscan\Command\Output
             $test = $result->getTest();
             $version = (isset($test->version)) ? $test->version : '';
             $test = (isset($test->key)) ? $test->key : '';
-            $value = $result->getValue();
+            $value = (string)$this->redactValue($test, $result->getValue());
 
             $output->writeLn(
                 '<fg='.$fgcolor.';bg='.$bgcolor.'>'
@@ -77,7 +77,7 @@ class Console extends \Psecio\Iniscan\Command\Output
                 .'| '.str_pad($version, 12, ' ')
                 .'| '.str_pad($value, 14, ' ')
                 .'| '.str_pad($test, 30, ' ')
-                .'| '.$result->getDescription()
+                .'| '.$this->redactText($result->getDescription())
                 .'</fg='.$fgcolor.';bg='.$bgcolor.'>'
                 );
 

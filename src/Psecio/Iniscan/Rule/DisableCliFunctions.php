@@ -41,6 +41,8 @@ class DisableCliFunctions extends \Psecio\Iniscan\Rule
 	 */
 	public function evaluate(array $ini)
 	{
+		$this->captureValue('disable_functions', $ini);
+
 		$disableFunctions = $this->findValue('disable_functions', $ini);
 
 		if (isset($disableFunctions)) {

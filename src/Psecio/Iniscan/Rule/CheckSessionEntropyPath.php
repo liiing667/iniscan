@@ -17,6 +17,8 @@ class CheckSessionEntropyPath extends \Psecio\Iniscan\Rule
 
 	public function evaluate(array $ini)
 	{
+		$this->captureValue('session.entropy_file', $ini);
+
 		// Resolve our entropy file
 		$entropyFile = realpath($this->findValue('session.entropy_file', $ini));
 

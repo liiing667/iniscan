@@ -13,7 +13,8 @@ class ShowCommand extends Command
         $this->setName('show')
             ->setDescription('Show the current PHP configuration')
             ->setDefinition(array(
-                new InputOption('path', 'path', InputOption::VALUE_OPTIONAL, 'Path to the php.ini')
+                new InputOption('path', 'path', InputOption::VALUE_OPTIONAL, 'Path to the php.ini'),
+                new InputOption('show-sensitive', 'show-sensitive', InputOption::VALUE_NONE, 'Show sensitive values in plain text (local diagnostics only)')
             ))
             ->setHelp(
                 'Execute the scan on the php.ini to show current settings'
@@ -41,6 +42,7 @@ class ShowCommand extends Command
             throw new \Exception('Path is null or not accessible: "'.$path.'"');
         }
         $ini = parse_ini_file($path, true);
+        $showSensitive = $input->getOption('show-sensitive');
 
         $output->writeLn('Current PHP.ini settings from '.$path);
         $output->writeLn('##########');
@@ -51,6 +53,9 @@ class ShowCommand extends Command
                 $output->writeLn("\t<fg=yellow>No settings</fg=yellow>");
             } else {
                 foreach ($data as $path => $value) {
+                    if ($showSensitive !== true) {
+                        $value = \Psecio\Iniscan\Redactor::redact($path, $value);
+                    }
                     $output->writeLn("\t".$path.' => '.var_export($value, true));
                 }
             }

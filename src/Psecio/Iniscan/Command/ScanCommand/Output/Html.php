@@ -34,7 +34,7 @@ class Html extends \Psecio\Iniscan\Command\Output
 			$resultHtml = '<div class="result '.$pass.'">';
 			$resultHtml .= '<table cellpadding="2" cellspacing="0" border="0" class="result">';
 			$resultHtml .= '<tr><td class="key">'.$result->getTestKey();
-			$resultHtml .= '<td>'.$result->getDescription().'</td></tr>';
+			$resultHtml .= '<td>'.$this->redactText($result->getDescription()).'</td></tr>';
 			$resultHtml .= '</table></div><br/>';
 
 			$values['results'] .= $resultHtml;

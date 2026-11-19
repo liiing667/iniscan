@@ -17,6 +17,8 @@ class MaximumPostSize extends \Psecio\Iniscan\Rule
 
 	public function evaluate(array $ini)
 	{
+		$this->captureValue('post_max_size', $ini);
+
 		$postSize = $this->findValue('post_max_size', $ini);
 
 		// find the number(s)

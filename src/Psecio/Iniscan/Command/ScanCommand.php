@@ -19,7 +19,8 @@ class ScanCommand extends Command
                 new InputOption('context', 'context', InputOption::VALUE_OPTIONAL, 'Environment context (ex. "prod")'),
                 new InputOption('threshold', 'threshold', InputOption::VALUE_OPTIONAL, 'Allows to show only things at or above this theshold'),
                 new InputOption('php', 'php-version', InputOption::VALUE_OPTIONAL, 'Which version of PHP to evaulate'),
-                new InputOption('output', 'output', InputOption::VALUE_OPTIONAL, 'Directory for file output types')
+                new InputOption('output', 'output', InputOption::VALUE_OPTIONAL, 'Directory for file output types'),
+                new InputOption('show-sensitive', 'show-sensitive', InputOption::VALUE_NONE, 'Show sensitive values in plain text (local diagnostics only)')
             ))
             ->setHelp(
                 'Execute the scan on the php.ini for security best practices'
@@ -75,7 +76,8 @@ class ScanCommand extends Command
             'failOnly' => $failOnly,
             'deprecated' => $deprecated,
             'verbose' => $input->getOption('verbose'),
-            'output' => $outputPath
+            'output' => $outputPath,
+            'showSensitive' => $input->getOption('show-sensitive')
         );
 
         $format = ($format === null) ? 'console' : $format;

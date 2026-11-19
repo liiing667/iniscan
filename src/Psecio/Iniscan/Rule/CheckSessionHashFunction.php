@@ -23,6 +23,8 @@ class CheckSessionHashFunction extends \Psecio\Iniscan\Rule
 	 */
 	public function evaluate(array $ini)
 	{
+		$this->captureValue('session.hash_function', $ini);
+
 		$hashFunction = $this->findValue('session.hash_function', $ini);
 
 		// Get a list of available hashing algorithms on this machine

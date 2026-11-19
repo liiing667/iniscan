@@ -97,6 +97,20 @@ There are 3 levels you can use:
 * ERROR
 * FATAL (No rules uses that level at the moment)
 
+### Sensitive values
+
+Audit reports are safe to share by default: values that look like secrets
+(passwords, tokens, connection strings with credentials, ...) are masked as
+`********` in every output format while keys, rules, sources and severity
+levels stay visible. Non-sensitive values are reported as they are.
+
+For local diagnostics you can explicitly echo the raw values with the
+`show-sensitive` flag:
+
+```
+vendor/bin/iniscan scan --path=/path/to/php.ini --show-sensitive
+```
+
 
 ### Show
 
@@ -105,6 +119,9 @@ The `show` command lists out the contents of your `php.ini` file with a bit of e
 ```
 vendor/bin/iniscan show --path=/path/to/php.ini
 ```
+
+Sensitive settings are masked here as well, use `--show-sensitive` to see
+the raw values for local diagnostics.
 
 ### List
 
@@ -170,4 +187,3 @@ This is default behavior and does not need to be enabled.
 
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/psecio/iniscan/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-

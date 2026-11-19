@@ -351,6 +351,23 @@ class Rule
 		return $value;
 	}
 
+	/**
+	 * Record the current value of an INI setting on the rule
+	 *
+	 * @param string $path "Path" to the value
+	 * @param array $ini Current INI settings
+	 * @return string Found INI value
+	 */
+	protected function captureValue($path, &$ini)
+	{
+		$value = $this->findValue($path, $ini);
+		if ($value === false || $value === null) {
+			$value = '';
+		}
+		$this->setValue($value);
+		return $value;
+	}
+
     /**
      * Evaluate the rule and its test
      *
@@ -367,9 +384,9 @@ class Rule
 			throw new \InvalidArgumentException('Invalid operation "'.$test->operation.'"');
 		}
 		$value = (isset($test->value)) ? $test->value : null;
-		$this->setValue($value);
 
 		$evalInstance = new $evalClass($this->getSection());
+		$this->captureValue($test->key, $ini);
 
 		if (isset($test->version) && !$this->isVersion($test->version)) {
 			$this->na();
