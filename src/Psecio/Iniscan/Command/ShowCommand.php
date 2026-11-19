@@ -13,7 +13,8 @@ class ShowCommand extends Command
         $this->setName('show')
             ->setDescription('Show the current PHP configuration')
             ->setDefinition(array(
-                new InputOption('path', 'path', InputOption::VALUE_OPTIONAL, 'Path to the php.ini')
+                new InputOption('path', 'path', InputOption::VALUE_OPTIONAL, 'Path to the php.ini'),
+                new InputOption('root', 'root', InputOption::VALUE_OPTIONAL, 'Root directory the php.ini must stay inside')
             ))
             ->setHelp(
                 'Execute the scan on the php.ini to show current settings'
@@ -31,16 +32,28 @@ class ShowCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $path = $input->getOption('path');
+        $root = $input->getOption('root');
 
         // if we're not given a path at all, try to figure it out
         if ($path === null) {
             $path = php_ini_loaded_file();
         }
 
-        if (!is_file($path)) {
-            throw new \Exception('Path is null or not accessible: "'.$path.'"');
+        if ($path === null) {
+            throw new \Psecio\Iniscan\Exceptions\InvalidPathException(
+                'Path is null or not accessible'
+            );
         }
+
+        $root = ($root !== null) ? $root : getcwd();
+        $scan = new \Psecio\Iniscan\Scan($path, array(), null, null, $root);
+        $path = $scan->getPath();
         $ini = parse_ini_file($path, true);
+        if ($ini === false) {
+            throw new \Psecio\Iniscan\Exceptions\InvalidPathException(
+                'Configuration file could not be parsed: '.$path
+            );
+        }
 
         $output->writeLn('Current PHP.ini settings from '.$path);
         $output->writeLn('##########');

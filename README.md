@@ -98,6 +98,22 @@ There are 3 levels you can use:
 * FATAL (No rules uses that level at the moment)
 
 
+#### Path Confinement
+
+Every configuration path is resolved to its real path and confined to a root
+directory. Relative paths are resolved against that root, symbolic links are
+followed only while their target stays inside it, and paths containing control
+characters, traversal sequences or unresolvable links fail closed with an
+error instead of reading files outside of the workspace.
+
+By default the root is the current working directory. Override it with
+`--root`:
+
+```
+vendor/bin/iniscan scan --path=conf/php.ini --root=/var/workspace
+```
+
+
 ### Show
 
 The `show` command lists out the contents of your `php.ini` file with a bit of extra formatting.
@@ -170,4 +186,3 @@ This is default behavior and does not need to be enabled.
 
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/psecio/iniscan/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-

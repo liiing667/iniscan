@@ -2,6 +2,8 @@
 
 namespace Psecio\Iniscan;
 
+use Psecio\Iniscan\Exceptions\InvalidPathException;
+
 class Scan
 {
 	/**
@@ -9,6 +11,12 @@ class Scan
 	 * @var string
 	 */
 	private $path;
+
+	/**
+	 * Guard confining every scanned configuration file to a root directory
+	 * @var \Psecio\Iniscan\PathGuard
+	 */
+	private $pathGuard;
 
 	/**
 	 * Set of context environments to run in (ex. "prod" or "dev")
@@ -48,9 +56,11 @@ class Scan
 	 * @param array $context Set of context environments to run in (ex. "prod" or "dev") [optional]
 	 * @param string $threshold Show only things at or above this theshold
 	 * @param string $version Which version of PHP to scan against
+	 * @param string $root Root directory the configuration must stay inside [optional]
 	 */
-	public function __construct($path = null, array $context = array(), $threshold = null, $version = null)
+	public function __construct($path = null, array $context = array(), $threshold = null, $version = null, $root = null)
 	{
+		$this->setRoot($root !== null ? $root : getcwd());
 		if ($path !== null) {
 			$this->setPath($path);
 		}
@@ -63,14 +73,44 @@ class Scan
      * Set the ini path to evaluate
      *
      * @param string $path Path to php.ini
-     * @throws \InvalidArgumentException
+     * @throws \Psecio\Iniscan\Exceptions\InvalidPathException Malformed or unreadable path
+     * @throws \Psecio\Iniscan\Exceptions\PathOutsideRootException Path or link target escapes the root
      */
 	public function setPath($path)
 	{
-		if (!is_file($path)) {
-			throw new \InvalidArgumentException('Path '.$path.' invalid');
-		}
-		$this->path = realpath($path);
+		$this->path = $this->pathGuard->resolve($path);
+	}
+
+	/**
+	 * Set the root directory that configuration files must be confined to
+	 *
+	 * @param string $root Root directory path
+	 * @throws \Psecio\Iniscan\Exceptions\InvalidPathException When the root is unusable
+	 */
+	public function setRoot($root)
+	{
+		$this->pathGuard = new PathGuard($root);
+	}
+
+	/**
+	 * Get the real path of the configured root directory
+	 *
+	 * @return string
+	 */
+	public function getRoot()
+	{
+		return $this->pathGuard->getRootPath();
+	}
+
+	/**
+	 * Classify a candidate path: "enter", "skip" (escaping symlink) or "reject"
+	 *
+	 * @param string $path Candidate configuration path
+	 * @return array Inspection result from the path guard
+	 */
+	public function inspectPath($path)
+	{
+		return $this->pathGuard->inspect($path);
 	}
 
 	/**
@@ -257,7 +297,19 @@ class Scan
 	 */
 	public function parseConfig($path = null)
 	{
-		$ini = parse_ini_file( (!is_null($path) ? $path : $this->path));
+		if ($path !== null) {
+			$resolvedPath = $this->pathGuard->resolve($path);
+			$this->path = $resolvedPath;
+		} else {
+			$resolvedPath = $this->pathGuard->verify($this->path);
+		}
+
+		$ini = parse_ini_file($resolvedPath);
+		if ($ini === false) {
+			throw new InvalidPathException(
+				'Configuration file could not be parsed: '.$resolvedPath
+			);
+		}
 
 		// pull in settings from other scanned INI files
 		$scannedIniList = php_ini_scanned_files();

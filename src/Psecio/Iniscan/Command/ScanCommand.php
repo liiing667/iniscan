@@ -19,7 +19,8 @@ class ScanCommand extends Command
                 new InputOption('context', 'context', InputOption::VALUE_OPTIONAL, 'Environment context (ex. "prod")'),
                 new InputOption('threshold', 'threshold', InputOption::VALUE_OPTIONAL, 'Allows to show only things at or above this theshold'),
                 new InputOption('php', 'php-version', InputOption::VALUE_OPTIONAL, 'Which version of PHP to evaulate'),
-                new InputOption('output', 'output', InputOption::VALUE_OPTIONAL, 'Directory for file output types')
+                new InputOption('output', 'output', InputOption::VALUE_OPTIONAL, 'Directory for file output types'),
+                new InputOption('root', 'root', InputOption::VALUE_OPTIONAL, 'Root directory the php.ini must stay inside')
             ))
             ->setHelp(
                 'Execute the scan on the php.ini for security best practices'
@@ -44,6 +45,7 @@ class ScanCommand extends Command
         $threshold = $input->getOption('threshold');
         $version = $input->getOption('php');
         $outputPath = $input->getOption('output');
+        $root = $input->getOption('root');
 
         if ($format === 'html' && $outputPath === null) {
             throw new \InvalidArgumentException('Output path must be set for format "HTML"');
@@ -62,11 +64,15 @@ class ScanCommand extends Command
             $path = php_ini_loaded_file();
         }
 
-        if (!is_file($path)) {
-            throw new \Exception('Path is null or not accessible: "'.$path.'"');
+        if ($path === null) {
+            throw new \Psecio\Iniscan\Exceptions\InvalidPathException(
+                'Path is null or not accessible'
+            );
         }
 
-        $scan = new \Psecio\Iniscan\Scan($path, $context, $threshold, $version);
+        $root = ($root !== null) ? $root : getcwd();
+        $scan = new \Psecio\Iniscan\Scan($path, $context, $threshold, $version, $root);
+        $path = $scan->getPath();
         $results = $scan->execute();
         $deprecated = $scan->getMarked();
 

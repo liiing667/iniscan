@@ -14,6 +14,7 @@ class FixCommand extends Command
                 ->setDescription('Try to fix the settings in the specified PHP.ini file')
             ->setDefinition(array(
                 new InputOption('path', 'path', InputOption::VALUE_OPTIONAL, 'Path to the php.ini'),
+                new InputOption('root', 'root', InputOption::VALUE_OPTIONAL, 'Root directory the php.ini must stay inside'),
             ))
             ->setHelp(
                 'Try to fix the settings in the specified PHP.ini file'
@@ -31,6 +32,7 @@ class FixCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $path = $input->getOption('path');
+        $root = $input->getOption('root');
         $context = array();
 
         // if we're not given a path at all, try to figure it out
@@ -38,11 +40,15 @@ class FixCommand extends Command
             $path = php_ini_loaded_file();
         }
 
-        if (!is_file($path)) {
-            throw new \Exception('Path is null or not accessible: "'.$path.'"');
+        if ($path === null) {
+            throw new \Psecio\Iniscan\Exceptions\InvalidPathException(
+                'Path is null or not accessible'
+            );
         }
 
-        $scan = new \Psecio\Iniscan\Scan($path, $context);
+        $root = ($root !== null) ? $root : getcwd();
+        $scan = new \Psecio\Iniscan\Scan($path, $context, null, null, $root);
+        $path = $scan->getPath();
         $scan->execute();
 
         $scan->getMarked();
@@ -53,7 +59,7 @@ class FixCommand extends Command
         copy($path, $backupPath);
 
         // Now les get our rules and parse them
-        $scan = new \Psecio\Iniscan\Scan($path, $context);
+        $scan = new \Psecio\Iniscan\Scan($path, $context, null, null, $root);
         $rules = get_object_vars($scan->getRules());
 
         $output->writeLn($this->generateIniOutput($rules));
