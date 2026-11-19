@@ -166,8 +166,56 @@ This is default behavior and does not need to be enabled.
 
 
 
+Multiple INI sources and override provenance
+--------------------------------------------
+
+PHP rarely uses a single `php.ini`: the loaded file is combined with every
+file from the scan directory reported by `php_ini_scanned_files()`, applied
+in that exact order. Iniscan merges those sources through
+`Psecio\Iniscan\IniMerge`, which keeps the merge explainable instead of
+silently letting later values overwrite earlier ones:
+
+- Every key records a **provenance chain**: each declaration's source file,
+  line number, declared value and application order, plus the entry that
+  finally wins and its effective value.
+- **Duplicate keys** (declared more than once, whether across files or
+  inside one file) are collected and printed, even when the values match.
+- Non-security keys keep the historical behaviour: the later value wins,
+  and the tolerated override is reported as a conflict for the audit trail.
+- Security relevant keys (every key guarded by a rule in `rules.json`,
+  including the custom rule classes) **fail closed**: if a later source
+  re-declares one with a different value, the scan aborts with an
+  `Psecio\Iniscan\Exceptions\IniConflictException` naming both sources and
+  values rather than auditing a silently weakened configuration.
+- Identical re-declarations and single, self-contained `php.ini` files keep
+  working exactly as before, so legacy configurations stay compatible.
+- An unreadable or unparsable INI source raises
+  `Psecio\Iniscan\Exceptions\IniParseException`; a broken source is never
+  skipped, because that would audit an incomplete configuration.
+
+The console report starts with the ordered source list and the duplicate /
+conflict summaries, and every rule row shows the effective source as
+`file:line`. With `-v`/`--verbose` the full provenance chain of each rule
+key is printed, for example:
+
+```
+Configuration sources (effective merge order):
+  #0   /etc/php/7.4/cli/php.ini
+  #1   /etc/php/7.4/cli/conf.d/10-base.ini
+  #2   /etc/php/7.4/cli/conf.d/20-extras.ini
+
+Duplicate keys declared across sources: allow_url_fopen, custom_setting
+Tolerated overrides (later value wins, non-security keys): custom_setting
+
+provenance: #0 php.ini:3 = "0" -> #1 10-base.ini:4 = "0" [effective]
+```
+
+The same state is available programmatically through `Scan::getConfigSources()`,
+`Scan::getDuplicateKeys()`, `Scan::getConflictingKeys()`,
+`Scan::getKeyProvenance($key)` and `Scan::getKeySource($key)`.
+
+
 @author Chris Cornutt <ccornutt@phpdeveloper.org>
 
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/psecio/iniscan/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-

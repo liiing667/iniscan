@@ -75,7 +75,11 @@ class ScanCommand extends Command
             'failOnly' => $failOnly,
             'deprecated' => $deprecated,
             'verbose' => $input->getOption('verbose'),
-            'output' => $outputPath
+            'output' => $outputPath,
+            'sources' => $scan->getConfigSources(),
+            'duplicates' => $scan->getDuplicateKeys(),
+            'conflicts' => $scan->getConflictingKeys(),
+            'provenance' => $scan->getKeyProvenance(),
         );
 
         $format = ($format === null) ? 'console' : $format;

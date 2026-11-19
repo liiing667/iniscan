@@ -36,6 +36,12 @@ class Scan
 	private $config = array();
 
 	/**
+	 * Merge result carrying sources, provenance and duplicate information
+	 * @var \Psecio\Iniscan\IniMerge
+	 */
+	private $merge;
+
+	/**
 	 * The version of PHP being tested for
 	 * @var string
 	 */
@@ -253,23 +259,181 @@ class Scan
 	 * Parse the configuration (php.ini) file
 	 *
 	 * @param string $path Path to the string to parse
+	 * @throws \Psecio\Iniscan\Exceptions\IniParseException When a source is unreadable
+	 * @throws \Psecio\Iniscan\Exceptions\IniConflictException On a dangerous override
 	 * @return array Ini settings
 	 */
 	public function parseConfig($path = null)
 	{
-		$ini = parse_ini_file( (!is_null($path) ? $path : $this->path));
+		$primaryPath = (!is_null($path) ? $path : $this->path);
 
-		// pull in settings from other scanned INI files
+		$merge = new IniMerge($this->getDangerousKeys());
+
+		// The loaded php.ini is applied first, then every scanned INI file
+		// in the exact order PHP reports them. This order is the effective
+		// override order and is preserved inside the merge result.
+		$merge->addSource($primaryPath);
+
+		foreach ($this->getScannedFiles() as $scannedFile) {
+			$merge->addSource($scannedFile);
+		}
+
+		$this->merge = $merge;
+		$ini = $merge->getConfig();
+		$this->setConfig($ini);
+		return $ini;
+	}
+
+	/**
+	 * Resolve the additional INI files PHP scans after the loaded php.ini.
+	 *
+	 * The list is returned in application order with duplicates removed so
+	 * the same file can never contribute twice to the merge.
+	 *
+	 * @return array Ordered list of INI file paths
+	 */
+	protected function getScannedFiles()
+	{
+		$files = array();
 		$scannedIniList = php_ini_scanned_files();
-		if ($scannedIniList !== false) {
-			foreach(explode(',', $scannedIniList) as $scannedFile) {
-				$scannedIni = parse_ini_file(trim($scannedFile));
-				$ini = array_merge($ini, $scannedIni);
+		if ($scannedIniList === false) {
+			return $files;
+		}
+
+		foreach (explode(',', $scannedIniList) as $scannedFile) {
+			$scannedFile = trim($scannedFile);
+			if ($scannedFile === '') {
+				continue;
+			}
+			$realPath = realpath($scannedFile);
+			if ($realPath !== false && !in_array($realPath, $files, true)) {
+				$files[] = $realPath;
+			}
+		}
+		return $files;
+	}
+
+	/**
+	 * Collect every key guarded by a rule (including the custom rule
+	 * classes). Overrides of these keys must fail closed because they are
+	 * exactly the security surface the audit reports on.
+	 *
+	 * @return array Set of lower-cased INI keys
+	 */
+	public function getDangerousKeys()
+	{
+		$keys = array();
+		foreach ($this->getRules() as $ruleSet) {
+			foreach ($ruleSet as $rule) {
+				if (isset($rule->test->key)) {
+					$keys[strtolower($rule->test->key)] = true;
+				}
 			}
 		}
 
-		$this->setConfig($ini);
-		return $ini;
+		foreach ($this->getCustomRuleKeys() as $key) {
+			$keys[strtolower($key)] = true;
+		}
+
+		return array_keys($keys);
+	}
+
+	/**
+	 * INI keys evaluated by the custom rule classes that do not declare a
+	 * static test key in rules.json.
+	 *
+	 * @return array
+	 */
+	protected function getCustomRuleKeys()
+	{
+		return array(
+			'session.save_handler',
+			'session.save_path',
+			'soap.wsdl_cache_enabled',
+			'soap.wsdl_cache_dir',
+			'session.entropy_file',
+			'session.hash_function',
+			'disable_functions',
+			'upload_tmp_dir',
+		);
+	}
+
+	/**
+	 * Get the merge result built during the last parseConfig call.
+	 *
+	 * @return \Psecio\Iniscan\IniMerge|null
+	 */
+	public function getMerge()
+	{
+		return $this->merge;
+	}
+
+	/**
+	 * Ordered list of the INI sources that contributed to the config.
+	 *
+	 * @return array
+	 */
+	public function getConfigSources()
+	{
+		if ($this->merge === null) {
+			return array();
+		}
+		return $this->merge->getSources();
+	}
+
+	/**
+	 * Full provenance chain for one key or every key.
+	 *
+	 * @param string $key INI key [optional]
+	 * @return array
+	 */
+	public function getKeyProvenance($key = null)
+	{
+		if ($this->merge === null) {
+			return array();
+		}
+		return $this->merge->getProvenance($key);
+	}
+
+	/**
+	 * The winning provenance entry (source, line, value) for a key.
+	 *
+	 * @param string $key INI key
+	 * @return array|null
+	 */
+	public function getKeySource($key)
+	{
+		if ($this->merge === null) {
+			return null;
+		}
+		return $this->merge->getWinningEntry($key);
+	}
+
+	/**
+	 * Keys declared by more than one source or more than once in a file.
+	 *
+	 * @return array
+	 */
+	public function getDuplicateKeys()
+	{
+		if ($this->merge === null) {
+			return array();
+		}
+		return $this->merge->getDuplicates();
+	}
+
+	/**
+	 * Duplicate keys whose redeclarations carried different values but were
+	 * tolerated because they are not security relevant.
+	 *
+	 * @return array
+	 */
+	public function getConflictingKeys()
+	{
+		if ($this->merge === null) {
+			return array();
+		}
+		return $this->merge->getConflicts();
 	}
 
 	/**
